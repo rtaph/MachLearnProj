@@ -1,0 +1,48 @@
+---
+title: "Practical Machine Learning"
+author: "rtaph"
+date: "December 16, 2014"
+---
+
+******************************
+## Title
+  
+The goal of this project is to predict the manner in which they did the exercise. 
+"dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects." 
+
+
+### Data Processing
+I begin the analysis by loading libraries and setting a few global parameters:
+  
+```{r chunkOpts, cache=TRUE}
+## load needed libraries, set global options, and working directory
+library(knitr); library(plyr)
+opts_chunk$set(echo = TRUE)       
+setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
+```
+
+I then check that the data file exists, download it (if needed), and unzip it:
+
+```{r chuckDownload}
+#Download file if it does not exist
+if (!file.exists("pml-training.csv")) {
+  fileURL <- "http://bit.ly/1GMwAry"
+  download.file(fileURL, destfile = "pml-training.csv", method="curl")
+}
+if (!file.exists("pml-testing.csv")) {
+  fileURL <- "http://bit.ly/1znCGyy"
+  download.file(fileURL, destfile = "pml-testing.csv", method="curl")
+}
+```
+
+
+
+```{r chunkLoadData, cache=TRUE}
+  # Load the data and assign it to a variable
+  train    =  read.csv("pml-training.csv", na.strings = "#DIV/0!")
+  set.seed(1234); t1   = train[sample(nrow(train),500),]
+  test    =  read.csv("pml-testing.csv")
+  rbind(training = dim(train), testing = dim(test))
+```
+
+With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
