@@ -14,7 +14,7 @@ The goal of this project is to predict the manner in which they did the exercise
 ### Data Processing
 I begin the analysis by loading libraries and setting a few global parameters:
   
-```{r chunkOpts, cache = TRUE, message = FALSE}
+```{r chunkOpts, message = FALSE}
   # load needed libraries, set global options, and working directory
   library(knitr); library(caret); library(randomForest)
   library(doMC); registerDoMC(cores = 2)
@@ -53,31 +53,58 @@ A review of the testing dataset reveals that there are only 58 predictor variabl
   testing   = testing[,!drop]
 ```
 
-```{r chunkSubset, cache = TRUE}
-  # smaller subset subset to improve speed
-  set.seed(3322); i = training[sample(nrow(training), 2000),]
-```
 
 With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
 
-
-```{r chunkRandomForrest, cache = TRUE}
-  # Random Forest Model
-  set.seed(4811)
-  fit.rf <- train(classe~., data = i, method = "rf", prox = TRUE)
+```{r chunkSubsets, cache = TRUE, autodep=TRUE}
+  # smaller subset subset to improve speed
+  set.seed(3322)
+  s100  = training[sample(nrow(training), 100),]
+  s200  = training[sample(nrow(training), 200),]
+  s300  = training[sample(nrow(training), 300),]
+  s500  = training[sample(nrow(training), 500),]
+  s1000 = training[sample(nrow(training), 1000),]
+  s1500 = training[sample(nrow(training), 1500),]
+  s2000 = training[sample(nrow(training), 2000),]
+  s3000 = training[sample(nrow(training), 3000),]
 ```
 
-```{r chunkGBM, cache = TRUE}
+```{r chunkRF3000, cache = TRUE, autodep=TRUE}
+  # Random Forest Model with 3000 observations
+  set.seed(675)
+  rf3000 <- train(classe~., data = s3000, method = "rf", prox = TRUE)
+```
+
+```{r chunkGBM3000, cache = TRUE, autodep=TRUE}
   # Boosted tree model
   set.seed(981)
-  fit.gbm <- train(classe~., data = i, method = "gbm", verbose = FALSE)
+  gbm100 <- train(classe~., data = s3000, method = "gbm", verbose = FALSE)
 ```
 
-```{r chunkResults, cache = TRUE}
-  fit.rf
-  fit.gbm
+```{r chunkResults, cache = TRUE, autodep=TRUE}
+  rf3000$finalModel
+  gbm100
 ```
 
+```{r chunkST1, cache = TRUE, autodep=TRUE}
+  # compare performancce
+  perf = rbind(system.time(train(classe~., data = s100, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s200, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s300, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s500, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s1000, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s2000, method = "rf", prox = TRUE)))
+
+  perf = cbind(n = c(100,200,300,500,1000,2000), perf)
+  perf
+```
+
+```{r chunkST1chart, cache = TRUE, autodep=TRUE}
+  # plot performancce
+  perf = as.data.frame(perf)
+  plot(elapsed~n, data = perf, type = "l")
+  lm(elapsed~n, data = perf)$coef[2]*1000/60
+```
 
 ```{r chunkPreds, cache = TRUE, eval=FALSE}
   pred <- predict(fit.rf, testing); testing$predRight <- pred==testing$classe
