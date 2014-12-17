@@ -63,6 +63,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="title" class="section level2">
 <h2>Title</h2>
 <p>The goal of this project is to predict the manner in which they did the exercise. “dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects.”</p>
+<p>Data is taken from <a href="http://groupware.les.inf.puc-rio.br/har">here</a>.</p>
 <div id="data-processing" class="section level3">
 <h3>Data Processing</h3>
 <p>I begin the analysis by loading libraries and setting a few global parameters:</p>
@@ -96,6 +97,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <pre class="r"><code>  # Boosted tree model
   set.seed(675)
   gbm5000 &lt;- train(classe~., data = s5000, method = &quot;gbm&quot;, verbose = FALSE)</code></pre>
+<p>We let the caret package run cross-validation and splits and automatically select the best tuning parameters.</p>
 <pre class="r"><code>  rf5000$finalModel</code></pre>
 <pre><code>## 
 ## Call:
@@ -164,9 +166,9 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 ##    D    0    0   14 2388    5
 ##    E    0    0    0   14 2724</code></pre>
 <p>We calculate the accuracy of the GBM on this holdout set:</p>
-<pre class="r"><code>  (t[1,1] + t[2,2] + t[3,3] + t[4,4] + t[5,5])/nrow(holdout)</code></pre>
+<pre class="r"><code>  sum(diag(t))/nrow(holdout)</code></pre>
 <pre><code>## [1] 0.9950759</code></pre>
-<p>This performance is even slightly better than the resampling error.</p>
+<p>This performance is even slightly better than the out-of-sample error.</p>
 </div>
 </div>
 <div id="predictions" class="section level2">

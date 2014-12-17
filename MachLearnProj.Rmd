@@ -10,6 +10,8 @@ date: "December 16, 2014"
 The goal of this project is to predict the manner in which they did the exercise. 
 "dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects." 
 
+Data is taken from [here](http://groupware.les.inf.puc-rio.br/har).
+
 
 ### Data Processing
 I begin the analysis by loading libraries and setting a few global parameters:
@@ -76,25 +78,12 @@ Now we train different models:
 ```
 
 
+We let the caret package run cross-validation and splits and automatically select the best tuning parameters.
 
 
 ```{r chunkResults, cache = TRUE, autodep=TRUE}
   rf5000$finalModel
   gbm5000
-```
-
-
-```{r chunkST1, cache = TRUE, autodep=TRUE, eval=FALSE, echo=FALSE}
-  # compare performancce
-  perf = rbind(system.time(train(classe~., data = s100, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s200, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s300, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s500, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s1000, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s2000, method = "rf", prox = TRUE)))
-
-  perf = cbind(n = c(100,200,300,500,1000,2000), perf)
-  perf
 ```
 
 We make a confusion matrix for the holdout set of data that was not used in training the data:
@@ -109,10 +98,10 @@ We make a confusion matrix for the holdout set of data that was not used in trai
 We calculate the accuracy of the GBM on this holdout set: 
 
 ```{r chunkAccuracy, cache = TRUE}
-  (t[1,1] + t[2,2] + t[3,3] + t[4,4] + t[5,5])/nrow(holdout)
+  sum(diag(t))/nrow(holdout)
 ```
 
-This performance is even slightly better than the resampling error.
+This performance is even slightly better than the out-of-sample error.
 
 ## Predictions
 ```{r chunkPred, cache = TRUE}
