@@ -16,12 +16,12 @@ I begin the analysis by loading libraries and setting a few global parameters:
   
 ```{r chunkOpts, cache=TRUE}
 ## load needed libraries, set global options, and working directory
-library(knitr); library(plyr); library(tree)
+library(knitr); library(plyr); library(tree); library(caret)
 opts_chunk$set(echo = TRUE)       
 setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
 ```
 
-I then check that the data file exists, download it (if needed), and unzip it:
+I then check that the data files exist, download it (if needed), and unzip it:
 
 ```{r chuckDownload}
 #Download file if it does not exist
@@ -35,17 +35,21 @@ if (!file.exists("pml-testing.csv")) {
 }
 ```
 
-
+A review of the testing dataset reveals that there are only 59 predictor variables. This number is far lower than the training set, which has `r 154-60` extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
 
 ```{r chunkLoadData, cache=TRUE}
-  # Load the data and assign it to a variable
+  # Read 
   training    =  read.csv("pml-training.csv", na.strings = c("#DIV/0!","NA"))
-  p = apply(training, 2, function(x) length(which(!is.na(x))))
-  index <- p != 0 # find columns with zero observations
-  training = training[,index] # keep only data frame containing some data
-  set.seed(1234); t1 = training[sample(nrow(training),1000),]
-  testing    =  read.csv("pml-testing.csv")
-  testing = testing[,index]
+  testing    =  read.csv("pml-testing.csv", na.strings = c("#DIV/0!","NA"))
+
+  # identify which parameters should be dropped (based on NAs)
+  p1 = apply(training, 2, function(x) length(which(!is.na(x))))
+  p2 = apply(testing, 2, function(x) length(which(!is.na(x))))
+  drop <- p1 == 0 | p2 == 0
+
+  # keep only data frame containing some data
+  training  = training[,!drop] 
+  testing   = testing[,!drop]
   rbind(training = dim(training), testing = dim(testing))
 ```
 
@@ -62,7 +66,7 @@ With 159 predictor variables available, a model selection method such as best su
 ```{r chunkBoost, cache=TRUE}
   # Boosted tree model
   set.seed(981)
-  fit.gbm2 <- train(classe~., data = training, method = "gbm", verbose = FALSE)
+  fit.gbm <- train(classe~., data = training, method = "gbm", verbose = FALSE)
   fit.gbm
 ```
 
