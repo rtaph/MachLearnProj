@@ -35,7 +35,7 @@ I then check that the data files exist, download it (if needed), and unzip it:
     download.file(fileURL, destfile = "pml-testing.csv", method="curl")}
 ```
 
-A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has `r 154-60` extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
+A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
 
 ```{r chunkLoadData, cache = TRUE}
   # Read data
@@ -56,37 +56,35 @@ A review of the testing dataset reveals that there are only 58 predictor variabl
 
 With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
 
-```{r chunkSubsets, cache = TRUE, autodep=TRUE}
+```{r chunkSub, cache = TRUE, autodep=TRUE}
   # smaller subset subset to improve speed
-  set.seed(3322)
-  s100  = training[sample(nrow(training), 100),]
-  s200  = training[sample(nrow(training), 200),]
-  s300  = training[sample(nrow(training), 300),]
-  s500  = training[sample(nrow(training), 500),]
-  s1000 = training[sample(nrow(training), 1000),]
-  s1500 = training[sample(nrow(training), 1500),]
-  s2000 = training[sample(nrow(training), 2000),]
-  s3000 = training[sample(nrow(training), 3000),]
+  set.seed(3322); s5000 = training[sample(nrow(training), 5000),]
 ```
 
-```{r chunkRF3000, cache = TRUE, autodep=TRUE}
-  # Random Forest Model with 3000 observations
+Now we train different models:
+
+```{r chunkRF5000, cache = TRUE, autodep=TRUE}
+  # Random forest model with 5000 observations
   set.seed(675)
-  rf3000 <- train(classe~., data = s3000, method = "rf", prox = TRUE)
+  rf5000 <- train(classe~., data = s5000, method = "rf", prox = TRUE)
 ```
 
-```{r chunkGBM3000, cache = TRUE, autodep=TRUE}
+```{r chunkGBM5000, cache = TRUE, autodep=TRUE}
   # Boosted tree model
-  set.seed(981)
-  gbm100 <- train(classe~., data = s3000, method = "gbm", verbose = FALSE)
+  set.seed(675)
+  gbm5000 <- train(classe~., data = s5000, method = "gbm", verbose = FALSE)
 ```
+
+
+
 
 ```{r chunkResults, cache = TRUE, autodep=TRUE}
-  rf3000$finalModel
-  gbm100
+  rf5000$finalModel
+  gbm5000
 ```
 
-```{r chunkST1, cache = TRUE, autodep=TRUE}
+
+```{r chunkST1, cache = TRUE, autodep=TRUE, eval=FALSE, echo=FALSE}
   # compare performancce
   perf = rbind(system.time(train(classe~., data = s100, method = "rf", prox = TRUE)),
         system.time(train(classe~., data = s200, method = "rf", prox = TRUE)),
@@ -99,14 +97,19 @@ With 159 predictor variables available, a model selection method such as best su
   perf
 ```
 
-```{r chunkST1chart, cache = TRUE, autodep=TRUE}
-  # plot performancce
-  perf = as.data.frame(perf)
-  plot(elapsed~n, data = perf, type = "l")
-  lm(elapsed~n, data = perf)$coef[2]*1000/60
+We make a confusion matrix for the holdout set of data that was not used in training the data:
+
+```{r chunkCM, cache = TRUE}
+  holdout = training[-c(as.numeric(row.names(s5000))),]
+  pred <- predict(gbm5000, holdout)
+  holdout$predRight <- pred == holdout$classe
+  (t = table(pred, holdout$classe))
 ```
 
-```{r chunkPreds, cache = TRUE, eval=FALSE}
-  pred <- predict(fit.rf, testing); testing$predRight <- pred==testing$classe
-  table(pred,testing$classe)
+We calculate the accuracy of the GBM on this holdout set: 
+
+```{r chunkAccuracy, cache = TRUE}
+  (t[1,1] + t[2,2] + t[3,3] + t[4,4] + t[5,5])/nrow(holdout)
 ```
+
+This performance is even slightly better than the resampling error.
