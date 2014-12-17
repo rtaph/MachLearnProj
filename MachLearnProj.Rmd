@@ -14,9 +14,10 @@ The goal of this project is to predict the manner in which they did the exercise
 ### Data Processing
 I begin the analysis by loading libraries and setting a few global parameters:
   
-```{r chunkOpts, cache = TRUE}
+```{r chunkOpts, cache = TRUE, message = FALSE}
   # load needed libraries, set global options, and working directory
   library(knitr); library(caret); library(randomForest)
+  library(doMC); registerDoMC(cores = 2)
   opts_chunk$set(echo = TRUE)       
   setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
 ```
@@ -34,7 +35,7 @@ I then check that the data files exist, download it (if needed), and unzip it:
     download.file(fileURL, destfile = "pml-testing.csv", method="curl")}
 ```
 
-A review of the testing dataset reveals that there are only 59 predictor variables. This number is far lower than the training set, which has `r 154-60` extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
+A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has `r 154-60` extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
 
 ```{r chunkLoadData, cache = TRUE}
   # Read data
@@ -45,11 +46,16 @@ A review of the testing dataset reveals that there are only 59 predictor variabl
   p1 = apply(training, 2, function(x) length(which(!is.na(x))))
   p2 = apply(testing, 2, function(x) length(which(!is.na(x))))
   drop <- p1 == 0 | p2 == 0; rm(p1, p2)
+  drop[1] = TRUE
 
   # keep only data frame containing some data
-  training  = training[,!drop] 
+  training  = training[,!drop]
   testing   = testing[,!drop]
-  rbind(training = dim(training), testing = dim(testing))
+```
+
+```{r chunkSubset, cache = TRUE}
+  # smaller subset subset to improve speed
+  set.seed(3322); i = training[sample(nrow(training), 2000),]
 ```
 
 With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
@@ -58,13 +64,13 @@ With 159 predictor variables available, a model selection method such as best su
 ```{r chunkRandomForrest, cache = TRUE}
   # Random Forest Model
   set.seed(4811)
-  fit.rf <- train(classe~., data = training, method = "rf", prox = TRUE)
+  fit.rf <- train(classe~., data = i, method = "rf", prox = TRUE)
 ```
 
 ```{r chunkGBM, cache = TRUE}
   # Boosted tree model
   set.seed(981)
-  fit.gbm <- train(classe~., data = training, method = "gbm", verbose = FALSE)
+  fit.gbm <- train(classe~., data = i, method = "gbm", verbose = FALSE)
 ```
 
 ```{r chunkResults, cache = TRUE}
@@ -73,7 +79,7 @@ With 159 predictor variables available, a model selection method such as best su
 ```
 
 
-```{r chunkPreds, cache = TRUE}
+```{r chunkPreds, cache = TRUE, eval=FALSE}
   pred <- predict(fit.rf, testing); testing$predRight <- pred==testing$classe
   table(pred,testing$classe)
 ```

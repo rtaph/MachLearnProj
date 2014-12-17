@@ -66,28 +66,108 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="data-processing" class="section level3">
 <h3>Data Processing</h3>
 <p>I begin the analysis by loading libraries and setting a few global parameters:</p>
-<pre class="r"><code>## load needed libraries, set global options, and working directory
-library(knitr); library(plyr)
-opts_chunk$set(echo = TRUE)       
-setwd(&quot;~/Documents/Courses/datasciencecoursera/MachLearnProj/&quot;)</code></pre>
-<p>I then check that the data file exists, download it (if needed), and unzip it:</p>
-<pre class="r"><code>#Download file if it does not exist
-if (!file.exists(&quot;pml-training.csv&quot;)) {
-  fileURL &lt;- &quot;http://bit.ly/1GMwAry&quot;
-  download.file(fileURL, destfile = &quot;pml-training.csv&quot;, method=&quot;curl&quot;)
-}
-if (!file.exists(&quot;pml-testing.csv&quot;)) {
-  fileURL &lt;- &quot;http://bit.ly/1znCGyy&quot;
-  download.file(fileURL, destfile = &quot;pml-testing.csv&quot;, method=&quot;curl&quot;)
-}</code></pre>
-<pre class="r"><code>  # Load the data and assign it to a variable
-  train    =  read.csv(&quot;pml-training.csv&quot;)
-  test    =  read.csv(&quot;pml-testing.csv&quot;)
-  rbind(training = dim(train), testing = dim(test))</code></pre>
-<pre><code>##           [,1] [,2]
-## training 19622  160
-## testing     20  160</code></pre>
+<pre class="r"><code>  # load needed libraries, set global options, and working directory
+  library(knitr); library(caret); library(randomForest)
+  library(doMC); registerDoMC(cores = 2)
+  opts_chunk$set(echo = TRUE)       
+  setwd(&quot;~/Documents/Courses/datasciencecoursera/MachLearnProj/&quot;)</code></pre>
+<p>I then check that the data files exist, download it (if needed), and unzip it:</p>
+<p>A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 94 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:</p>
+<pre class="r"><code>  # Read data
+  training    =  read.csv(&quot;pml-training.csv&quot;, na.strings = c(&quot;#DIV/0!&quot;,&quot;NA&quot;))
+  testing    =  read.csv(&quot;pml-testing.csv&quot;, na.strings = c(&quot;#DIV/0!&quot;,&quot;NA&quot;))
+
+  # identify which parameters should be dropped (based on NAs)
+  p1 = apply(training, 2, function(x) length(which(!is.na(x))))
+  p2 = apply(testing, 2, function(x) length(which(!is.na(x))))
+  drop &lt;- p1 == 0 | p2 == 0; rm(p1, p2)
+  drop[1] = TRUE
+
+  # keep only data frame containing some data
+  training  = training[,!drop]
+  testing   = testing[,!drop]</code></pre>
+<pre class="r"><code>  # smaller subset subset to improve speed
+  set.seed(3322); i = training[sample(nrow(training), 2000),]</code></pre>
 <p>With 159 predictor variables available, a model selection method such as best subset selection is unfeasible.</p>
+<pre class="r"><code>  # Random Forest Model
+  set.seed(4811)
+  fit.rf &lt;- train(classe~., data = i, method = &quot;rf&quot;, prox = TRUE)</code></pre>
+<pre class="r"><code>  # Boosted tree model
+  set.seed(981)
+  fit.gbm &lt;- train(classe~., data = i, method = &quot;gbm&quot;, verbose = FALSE)</code></pre>
+<pre><code>## Loading required package: gbm
+## Loading required package: survival
+## Loading required package: splines
+## 
+## Attaching package: 'survival'
+## 
+## The following object is masked from 'package:caret':
+## 
+##     cluster
+## 
+## Loaded gbm 2.1</code></pre>
+<pre class="r"><code>  fit.rf</code></pre>
+<pre><code>## Random Forest 
+## 
+## 2000 samples
+##   58 predictor
+##    5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Bootstrapped (25 reps) 
+## 
+## Summary of sample sizes: 2000, 2000, 2000, 2000, 2000, 2000, ... 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy   Kappa      Accuracy SD  Kappa SD   
+##    2    0.9410658  0.9250681  0.009579239  0.012132572
+##   41    0.9696826  0.9614962  0.006610433  0.008345886
+##   80    0.9685072  0.9600065  0.006043264  0.007620967
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 41.</code></pre>
+<pre class="r"><code>  fit.gbm</code></pre>
+<pre><code>## Stochastic Gradient Boosting 
+## 
+## 2000 samples
+##   58 predictor
+##    5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Bootstrapped (25 reps) 
+## 
+## Summary of sample sizes: 2000, 2000, 2000, 2000, 2000, 2000, ... 
+## 
+## Resampling results across tuning parameters:
+## 
+##   interaction.depth  n.trees  Accuracy   Kappa      Accuracy SD
+##   1                   50      0.8142926  0.7634163  0.018182045
+##   1                  100      0.8768911  0.8434811  0.014800796
+##   1                  150      0.9015715  0.8748866  0.014502205
+##   2                   50      0.9203095  0.8986784  0.012396380
+##   2                  100      0.9528958  0.9401462  0.009643071
+##   2                  150      0.9649227  0.9554565  0.008447974
+##   3                   50      0.9429784  0.9275235  0.011277948
+##   3                  100      0.9660690  0.9569054  0.008091064
+##   3                  150      0.9729727  0.9656798  0.007115031
+##   Kappa SD   
+##   0.022955432
+##   0.018695861
+##   0.018356311
+##   0.015746008
+##   0.012268626
+##   0.010702554
+##   0.014352092
+##   0.010280545
+##   0.009048475
+## 
+## Tuning parameter 'shrinkage' was held constant at a value of 0.1
+## Accuracy was used to select the optimal model using  the largest value.
+## The final values used for the model were n.trees = 150,
+##  interaction.depth = 3 and shrinkage = 0.1.</code></pre>
+<pre class="r"><code>  pred &lt;- predict(fit.rf, testing); testing$predRight &lt;- pred==testing$classe
+  table(pred,testing$classe)</code></pre>
 </div>
 </div>
 
