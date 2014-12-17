@@ -16,7 +16,7 @@ I begin the analysis by loading libraries and setting a few global parameters:
   
 ```{r chunkOpts, cache=TRUE}
 ## load needed libraries, set global options, and working directory
-library(knitr); library(plyr)
+library(knitr); library(plyr); library(tree)
 opts_chunk$set(echo = TRUE)       
 setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
 ```
@@ -39,10 +39,35 @@ if (!file.exists("pml-testing.csv")) {
 
 ```{r chunkLoadData, cache=TRUE}
   # Load the data and assign it to a variable
-  train    =  read.csv("pml-training.csv", na.strings = "#DIV/0!")
-  set.seed(1234); t1   = train[sample(nrow(train),500),]
-  test    =  read.csv("pml-testing.csv")
-  rbind(training = dim(train), testing = dim(test))
+  training    =  read.csv("pml-training.csv", na.strings = c("#DIV/0!","NA"))
+  p = apply(training, 2, function(x) length(which(!is.na(x))))
+  index <- p != 0 # find columns with zero observations
+  training = training[,index] # keep only data frame containing some data
+  set.seed(1234); t1 = training[sample(nrow(training),1000),]
+  testing    =  read.csv("pml-testing.csv")
+  testing = testing[,index]
+  rbind(training = dim(training), testing = dim(testing))
 ```
 
 With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
+
+
+```{r chunkRandomForrest, cache=TRUE}
+  # Random Forest Model
+  set.seed(4811)
+  fit.rf <- train(classe~., data = training, method = "rf", prox = TRUE)
+  fit.rf
+```
+
+```{r chunkBoost, cache=TRUE}
+  # Boosted tree model
+  set.seed(981)
+  fit.gbm2 <- train(classe~., data = training, method = "gbm", verbose = FALSE)
+  fit.gbm
+```
+
+
+```{r chunkPreds, cache=TRUE}
+pred <- predict(fit.rf, testing); testing$predRight <- pred==testing$classe
+table(pred,testing$classe)
+```
