@@ -15,37 +15,36 @@ The goal of this project is to predict the manner in which they did the exercise
 I begin the analysis by loading libraries and setting a few global parameters:
   
 ```{r chunkOpts, cache=TRUE}
-## load needed libraries, set global options, and working directory
-library(knitr); library(plyr); library(tree); library(caret)
-opts_chunk$set(echo = TRUE)       
-setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
+  # load needed libraries, set global options, and working directory
+  library(knitr); library(caret)
+  opts_chunk$set(echo = TRUE)       
+  setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
 ```
 
 I then check that the data files exist, download it (if needed), and unzip it:
 
-```{r chuckDownload}
-#Download file if it does not exist
-if (!file.exists("pml-training.csv")) {
-  fileURL <- "http://bit.ly/1GMwAry"
-  download.file(fileURL, destfile = "pml-training.csv", method="curl")
-}
-if (!file.exists("pml-testing.csv")) {
-  fileURL <- "http://bit.ly/1znCGyy"
-  download.file(fileURL, destfile = "pml-testing.csv", method="curl")
-}
+```{r chuckDownload, echo=FALSE}
+  # Download file if it does not exist
+  if (!file.exists("pml-training.csv")) {
+    fileURL <- "http://bit.ly/1GMwAry"
+    download.file(fileURL, destfile = "pml-training.csv", method="curl")}
+  
+  if (!file.exists("pml-testing.csv")) {
+    fileURL <- "http://bit.ly/1znCGyy"
+    download.file(fileURL, destfile = "pml-testing.csv", method="curl")}
 ```
 
 A review of the testing dataset reveals that there are only 59 predictor variables. This number is far lower than the training set, which has `r 154-60` extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
 
 ```{r chunkLoadData, cache=TRUE}
-  # Read 
+  # Read data
   training    =  read.csv("pml-training.csv", na.strings = c("#DIV/0!","NA"))
   testing    =  read.csv("pml-testing.csv", na.strings = c("#DIV/0!","NA"))
 
   # identify which parameters should be dropped (based on NAs)
   p1 = apply(training, 2, function(x) length(which(!is.na(x))))
   p2 = apply(testing, 2, function(x) length(which(!is.na(x))))
-  drop <- p1 == 0 | p2 == 0
+  drop <- p1 == 0 | p2 == 0; rm(p1, p2)
 
   # keep only data frame containing some data
   training  = training[,!drop] 
@@ -63,7 +62,7 @@ With 159 predictor variables available, a model selection method such as best su
   fit.rf
 ```
 
-```{r chunkBoost, cache=TRUE}
+```{r chunkGBM, cache=TRUE}
   # Boosted tree model
   set.seed(981)
   fit.gbm <- train(classe~., data = training, method = "gbm", verbose = FALSE)
@@ -72,6 +71,6 @@ With 159 predictor variables available, a model selection method such as best su
 
 
 ```{r chunkPreds, cache=TRUE}
-pred <- predict(fit.rf, testing); testing$predRight <- pred==testing$classe
-table(pred,testing$classe)
+  pred <- predict(fit.rf, testing); testing$predRight <- pred==testing$classe
+  table(pred,testing$classe)
 ```
