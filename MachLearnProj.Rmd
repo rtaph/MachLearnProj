@@ -63,7 +63,7 @@ With 159 predictor variables available, a model selection method such as best su
   set.seed(3322); s5000 = training[sample(nrow(training), 5000),]
 ```
 
-Now we train different models:
+Now we train different models. I have chosen two statistical learning methods that generally are quite competitive: random forersts and gradient boosting. We train on both these models using 5000 randomly selected observations from the data. The seed is set identically in each case so that model diagnostics may fairly be compare.
 
 ```{r chunkRF5000, cache = TRUE, autodep=TRUE}
   # Random forest model with 5000 observations
@@ -78,13 +78,15 @@ Now we train different models:
 ```
 
 
-We let the caret package run cross-validation and splits and automatically select the best tuning parameters.
+We let the caret package run cross-validation and splits and automatically select the best tuning parameters. 
 
 
 ```{r chunkResults, cache = TRUE, autodep=TRUE}
   rf5000$finalModel
   gbm5000
 ```
+
+The model print-outs estimate an out-of sample error rate. The out-of-bag error rate for the random forest model is 0.46%, calculated through cross-validation. This is slighlty higher than the best error estimation rate for boosting (0.26%).
 
 We make a confusion matrix for the holdout set of data that was not used in training the data:
 
@@ -105,6 +107,9 @@ This performance is even slightly better than the out-of-sample error.
 
 ## Predictions
 ```{r chunkPred, cache = TRUE}
-  pred2 <- predict(gbm5000, testing)
-  data.frame(Prediction = pred2)
+  predA <- predict(rf5000, testing)
+  predB <- predict(gbm5000, testing)
+  data.frame(RF = predA, GBM = predB)
 ```
+
+Model predictions agree with another.

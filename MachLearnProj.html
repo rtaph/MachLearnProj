@@ -90,7 +90,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <p>With 159 predictor variables available, a model selection method such as best subset selection is unfeasible.</p>
 <pre class="r"><code>  # smaller subset subset to improve speed
   set.seed(3322); s5000 = training[sample(nrow(training), 5000),]</code></pre>
-<p>Now we train different models:</p>
+<p>Now we train different models. I have chosen two statistical learning methods that generally are quite competitive: random forersts and gradient boosting. We train on both these models using 5000 randomly selected observations from the data. The seed is set identically in each case so that model diagnostics may fairly be compare.</p>
 <pre class="r"><code>  # Random forest model with 5000 observations
   set.seed(675)
   rf5000 &lt;- train(classe~., data = s5000, method = &quot;rf&quot;, prox = TRUE)</code></pre>
@@ -153,6 +153,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final values used for the model were n.trees = 150,
 ##  interaction.depth = 3 and shrinkage = 0.1.</code></pre>
+<p>The model print-outs estimate an out-of sample error rate. The out-of-bag error rate for the random forest model is 0.46%, calculated through cross-validation. This is slighlty higher than the best error estimation rate for boosting (0.26%).</p>
 <p>We make a confusion matrix for the holdout set of data that was not used in training the data:</p>
 <pre class="r"><code>  holdout = training[-c(as.numeric(row.names(s5000))),]
   pred &lt;- predict(gbm5000, holdout)
@@ -173,29 +174,31 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 </div>
 <div id="predictions" class="section level2">
 <h2>Predictions</h2>
-<pre class="r"><code>  pred2 &lt;- predict(gbm5000, testing)
-  data.frame(Prediction = pred2)</code></pre>
-<pre><code>##    Prediction
-## 1           B
-## 2           A
-## 3           B
-## 4           A
-## 5           A
-## 6           E
-## 7           D
-## 8           B
-## 9           A
-## 10          A
-## 11          B
-## 12          C
-## 13          B
-## 14          A
-## 15          E
-## 16          E
-## 17          A
-## 18          B
-## 19          B
-## 20          B</code></pre>
+<pre class="r"><code>  predA &lt;- predict(rf5000, testing)
+  predB &lt;- predict(gbm5000, testing)
+  data.frame(RF = predA, GBM = predB)</code></pre>
+<pre><code>##    RF GBM
+## 1   B   B
+## 2   A   A
+## 3   B   B
+## 4   A   A
+## 5   A   A
+## 6   E   E
+## 7   D   D
+## 8   B   B
+## 9   A   A
+## 10  A   A
+## 11  B   B
+## 12  C   C
+## 13  B   B
+## 14  A   A
+## 15  E   E
+## 16  E   E
+## 17  A   A
+## 18  B   B
+## 19  B   B
+## 20  B   B</code></pre>
+<p>Model predictions agree with another.</p>
 </div>
 
 
