@@ -169,6 +169,32 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <p>This performance is even slightly better than the resampling error.</p>
 </div>
 </div>
+<div id="predictions" class="section level2">
+<h2>Predictions</h2>
+<pre class="r"><code>  pred2 &lt;- predict(gbm5000, testing)
+  data.frame(Prediction = pred2)</code></pre>
+<pre><code>##    Prediction
+## 1           B
+## 2           A
+## 3           B
+## 4           A
+## 5           A
+## 6           E
+## 7           D
+## 8           B
+## 9           A
+## 10          A
+## 11          B
+## 12          C
+## 13          B
+## 14          A
+## 15          E
+## 16          E
+## 17          A
+## 18          B
+## 19          B
+## 20          B</code></pre>
+</div>
 
 
 </div>

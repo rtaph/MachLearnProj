@@ -113,3 +113,9 @@ We calculate the accuracy of the GBM on this holdout set:
 ```
 
 This performance is even slightly better than the resampling error.
+
+## Predictions
+```{r chunkPred, cache = TRUE}
+  pred2 <- predict(gbm5000, testing)
+  data.frame(Prediction = pred2)
+```
