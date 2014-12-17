@@ -14,16 +14,16 @@ The goal of this project is to predict the manner in which they did the exercise
 ### Data Processing
 I begin the analysis by loading libraries and setting a few global parameters:
   
-```{r chunkOpts, cache=TRUE}
+```{r chunkOpts, cache = TRUE}
   # load needed libraries, set global options, and working directory
-  library(knitr); library(caret)
+  library(knitr); library(caret); library(randomForest)
   opts_chunk$set(echo = TRUE)       
   setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
 ```
 
 I then check that the data files exist, download it (if needed), and unzip it:
 
-```{r chuckDownload, echo=FALSE}
+```{r chuckDownload, echo = FALSE}
   # Download file if it does not exist
   if (!file.exists("pml-training.csv")) {
     fileURL <- "http://bit.ly/1GMwAry"
@@ -36,7 +36,7 @@ I then check that the data files exist, download it (if needed), and unzip it:
 
 A review of the testing dataset reveals that there are only 59 predictor variables. This number is far lower than the training set, which has `r 154-60` extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
 
-```{r chunkLoadData, cache=TRUE}
+```{r chunkLoadData, cache = TRUE}
   # Read data
   training    =  read.csv("pml-training.csv", na.strings = c("#DIV/0!","NA"))
   testing    =  read.csv("pml-testing.csv", na.strings = c("#DIV/0!","NA"))
@@ -55,22 +55,25 @@ A review of the testing dataset reveals that there are only 59 predictor variabl
 With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
 
 
-```{r chunkRandomForrest, cache=TRUE}
+```{r chunkRandomForrest, cache = TRUE}
   # Random Forest Model
   set.seed(4811)
   fit.rf <- train(classe~., data = training, method = "rf", prox = TRUE)
-  fit.rf
 ```
 
-```{r chunkGBM, cache=TRUE}
+```{r chunkGBM, cache = TRUE}
   # Boosted tree model
   set.seed(981)
   fit.gbm <- train(classe~., data = training, method = "gbm", verbose = FALSE)
+```
+
+```{r chunkResults, cache = TRUE}
+  fit.rf
   fit.gbm
 ```
 
 
-```{r chunkPreds, cache=TRUE}
+```{r chunkPreds, cache = TRUE}
   pred <- predict(fit.rf, testing); testing$predRight <- pred==testing$classe
   table(pred,testing$classe)
 ```
