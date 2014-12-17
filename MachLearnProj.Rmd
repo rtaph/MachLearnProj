@@ -1,0 +1,121 @@
+---
+title: "Practical Machine Learning"
+author: "rtaph"
+date: "December 16, 2014"
+---
+
+******************************
+## Title
+  
+The goal of this project is to predict the manner in which they did the exercise. 
+"dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects." 
+
+
+### Data Processing
+I begin the analysis by loading libraries and setting a few global parameters:
+  
+```{r chunkOpts, message = FALSE}
+  # load needed libraries, set global options, and working directory
+  library(knitr); library(caret); library(randomForest)
+  library(doMC); registerDoMC(cores = 2)
+  opts_chunk$set(echo = TRUE)       
+  setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
+```
+
+I then check that the data files exist, download it (if needed), and unzip it:
+
+```{r chuckDownload, echo = FALSE}
+  # Download file if it does not exist
+  if (!file.exists("pml-training.csv")) {
+    fileURL <- "http://bit.ly/1GMwAry"
+    download.file(fileURL, destfile = "pml-training.csv", method="curl")}
+  
+  if (!file.exists("pml-testing.csv")) {
+    fileURL <- "http://bit.ly/1znCGyy"
+    download.file(fileURL, destfile = "pml-testing.csv", method="curl")}
+```
+
+A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
+
+```{r chunkLoadData, cache = TRUE}
+  # Read data
+  training    =  read.csv("pml-training.csv", na.strings = c("#DIV/0!","NA"))
+  testing    =  read.csv("pml-testing.csv", na.strings = c("#DIV/0!","NA"))
+
+  # identify which parameters should be dropped (based on NAs)
+  p1 = apply(training, 2, function(x) length(which(!is.na(x))))
+  p2 = apply(testing, 2, function(x) length(which(!is.na(x))))
+  drop <- p1 == 0 | p2 == 0; rm(p1, p2)
+  drop[1] = TRUE
+
+  # keep only data frame containing some data
+  training  = training[,!drop]
+  testing   = testing[,!drop]
+```
+
+
+With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
+
+```{r chunkSub, cache = TRUE, autodep=TRUE}
+  # smaller subset subset to improve speed
+  set.seed(3322); s5000 = training[sample(nrow(training), 5000),]
+```
+
+Now we train different models:
+
+```{r chunkRF5000, cache = TRUE, autodep=TRUE}
+  # Random forest model with 5000 observations
+  set.seed(675)
+  rf5000 <- train(classe~., data = s5000, method = "rf", prox = TRUE)
+```
+
+```{r chunkGBM5000, cache = TRUE, autodep=TRUE}
+  # Boosted tree model
+  set.seed(675)
+  gbm5000 <- train(classe~., data = s5000, method = "gbm", verbose = FALSE)
+```
+
+
+
+
+```{r chunkResults, cache = TRUE, autodep=TRUE}
+  rf5000$finalModel
+  gbm5000
+```
+
+
+```{r chunkST1, cache = TRUE, autodep=TRUE, eval=FALSE, echo=FALSE}
+  # compare performancce
+  perf = rbind(system.time(train(classe~., data = s100, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s200, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s300, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s500, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s1000, method = "rf", prox = TRUE)),
+        system.time(train(classe~., data = s2000, method = "rf", prox = TRUE)))
+
+  perf = cbind(n = c(100,200,300,500,1000,2000), perf)
+  perf
+```
+
+We make a confusion matrix for the holdout set of data that was not used in training the data:
+
+```{r chunkCM, cache = TRUE}
+  holdout = training[-c(as.numeric(row.names(s5000))),]
+  pred <- predict(gbm5000, holdout)
+  holdout$predRight <- pred == holdout$classe
+  (t = table(pred, holdout$classe))
+```
+
+We calculate the accuracy of the GBM on this holdout set: 
+
+```{r chunkAccuracy, cache = TRUE}
+  (t[1,1] + t[2,2] + t[3,3] + t[4,4] + t[5,5])/nrow(holdout)
+```
+
+This performance is even slightly better than the resampling error.
+
+## Predictions
+```{r chunkPred, cache = TRUE}
+  pred2 <- predict(gbm5000, testing)
+  data.frame(Prediction = pred2)
+```
