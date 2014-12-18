@@ -90,7 +90,7 @@ The model print-outs estimate an out-of sample error rate. The out-of-bag error 
 
 We make a confusion matrix for the holdout set of data that was not used in training the data:
 
-```{r chunkCM, cache = TRUE}
+```{r chunkCM, cache = TRUE, autodep=TRUE}
   holdout = training[-c(as.numeric(row.names(s5000))),]
   pred <- predict(gbm5000, holdout)
   holdout$predRight <- pred == holdout$classe
@@ -99,17 +99,28 @@ We make a confusion matrix for the holdout set of data that was not used in trai
 
 We calculate the accuracy of the GBM on this holdout set: 
 
-```{r chunkAccuracy, cache = TRUE}
+```{r chunkAccuracy, cache = TRUE, autodep=TRUE}
   sum(diag(t))/nrow(holdout)
 ```
 
 This performance is even slightly better than the out-of-sample error.
 
 ## Predictions
-```{r chunkPred, cache = TRUE}
+```{r chunkPred, cache = TRUE, autodep=TRUE}
   predA <- predict(rf5000, testing)
   predB <- predict(gbm5000, testing)
   data.frame(RF = predA, GBM = predB)
 ```
 
 Model predictions agree with another.
+
+```{r chunkExport, cache = TRUE, autodep=TRUE, echo=FALSE}
+  pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+      filename = paste0("problem_id_",i,".txt")
+      write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+      }
+  }
+  pml_write_files(predB)
+```
