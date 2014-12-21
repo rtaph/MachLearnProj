@@ -5,10 +5,9 @@ date: "December 16, 2014"
 ---
 
 ******************************
-## Title
+## Predicting Exercise Patterns
   
-The goal of this project is to predict the manner in which they did the exercise. 
-"dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects." 
+The goal of this project is to predict the manner in which people do exercise. The data set comprises of measurements taken won four healthy subjects doing different activities. The response variable is made up of 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours.
 
 Data is taken from [here](http://groupware.les.inf.puc-rio.br/har).
 
@@ -24,7 +23,8 @@ I begin the analysis by loading libraries and setting a few global parameters:
   setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
 ```
 
-I then check that the data files exist, download it (if needed), and unzip it:
+If the data file does not exist, it is downloaded. The file is then read into R:
+
 
 ```{r chuckDownload, echo = FALSE}
   # Download file if it does not exist
@@ -36,8 +36,6 @@ I then check that the data files exist, download it (if needed), and unzip it:
     fileURL <- "http://bit.ly/1znCGyy"
     download.file(fileURL, destfile = "pml-testing.csv", method="curl")}
 ```
-
-A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
 
 ```{r chunkLoadData, cache = TRUE}
   # Read data
@@ -55,15 +53,18 @@ A review of the testing dataset reveals that there are only 58 predictor variabl
   testing   = testing[,!drop]
 ```
 
+A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set (see above).
 
-With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
+I then subset the data to a smaller, more workable size (5000 observations only):
 
 ```{r chunkSub, cache = TRUE, autodep=TRUE}
   # smaller subset subset to improve speed
   set.seed(3322); s5000 = training[sample(nrow(training), 5000),]
 ```
 
-Now we train different models. I have chosen two statistical learning methods that generally are quite competitive: random forersts and gradient boosting. We train on both these models using 5000 randomly selected observations from the data. The seed is set identically in each case so that model diagnostics may fairly be compare.
+## Model Training
+
+Now we train different models. I have chosen two statistical learning methods that generally are quite competitive: random forersts and gradient boosting. We train on both these models using 5000 randomly selected observations from the data. The seed is set identically in each case so that model diagnostics may fairly be compared.
 
 ```{r chunkRF5000, cache = TRUE, autodep=TRUE}
   # Random forest model with 5000 observations
