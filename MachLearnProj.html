@@ -60,9 +60,10 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 
 
 <hr />
-<div id="title" class="section level2">
-<h2>Title</h2>
-<p>The goal of this project is to predict the manner in which they did the exercise. “dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects.”</p>
+<div id="predicting-exercise-patterns" class="section level2">
+<h2>Predicting Exercise Patterns</h2>
+<p>The goal of this project is to predict the manner in which people do exercise. The data set comprises of measurements taken won four healthy subjects doing different activities. The response variable is made up of 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours.</p>
+<p>Data is taken from <a href="http://groupware.les.inf.puc-rio.br/har">here</a>.</p>
 <div id="data-processing" class="section level3">
 <h3>Data Processing</h3>
 <p>I begin the analysis by loading libraries and setting a few global parameters:</p>
@@ -71,8 +72,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
   library(doMC); registerDoMC(cores = 2)
   opts_chunk$set(echo = TRUE)       
   setwd(&quot;~/Documents/Courses/datasciencecoursera/MachLearnProj/&quot;)</code></pre>
-<p>I then check that the data files exist, download it (if needed), and unzip it:</p>
-<p>A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:</p>
+<p>If the data file does not exist, it is downloaded. The file is then read into R:</p>
 <pre class="r"><code>  # Read data
   training    =  read.csv(&quot;pml-training.csv&quot;, na.strings = c(&quot;#DIV/0!&quot;,&quot;NA&quot;))
   testing    =  read.csv(&quot;pml-testing.csv&quot;, na.strings = c(&quot;#DIV/0!&quot;,&quot;NA&quot;))
@@ -86,16 +86,22 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
   # keep only data frame containing some data
   training  = training[,!drop]
   testing   = testing[,!drop]</code></pre>
-<p>With 159 predictor variables available, a model selection method such as best subset selection is unfeasible.</p>
+<p>A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set (see above).</p>
+<p>I then subset the data to a smaller, more workable size (5000 observations only):</p>
 <pre class="r"><code>  # smaller subset subset to improve speed
   set.seed(3322); s5000 = training[sample(nrow(training), 5000),]</code></pre>
-<p>Now we train different models:</p>
+</div>
+</div>
+<div id="model-training" class="section level2">
+<h2>Model Training</h2>
+<p>Now we train different models. I have chosen two statistical learning methods that generally are quite competitive: random forersts and gradient boosting. We train on both these models using 5000 randomly selected observations from the data. The seed is set identically in each case so that model diagnostics may fairly be compared.</p>
 <pre class="r"><code>  # Random forest model with 5000 observations
   set.seed(675)
   rf5000 &lt;- train(classe~., data = s5000, method = &quot;rf&quot;, prox = TRUE)</code></pre>
 <pre class="r"><code>  # Boosted tree model
   set.seed(675)
   gbm5000 &lt;- train(classe~., data = s5000, method = &quot;gbm&quot;, verbose = FALSE)</code></pre>
+<p>We let the caret package run cross-validation and splits and automatically select the best tuning parameters.</p>
 <pre class="r"><code>  rf5000$finalModel</code></pre>
 <pre><code>## 
 ## Call:
@@ -151,6 +157,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final values used for the model were n.trees = 150,
 ##  interaction.depth = 3 and shrinkage = 0.1.</code></pre>
+<p>The model print-outs estimate an out-of sample error rate. The out-of-bag error rate for the random forest model is 0.46%, calculated through cross-validation. This is slighlty higher than the best error estimation rate for boosting (0.26%).</p>
 <p>We make a confusion matrix for the holdout set of data that was not used in training the data:</p>
 <pre class="r"><code>  holdout = training[-c(as.numeric(row.names(s5000))),]
   pred &lt;- predict(gbm5000, holdout)
@@ -164,36 +171,37 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 ##    D    0    0   14 2388    5
 ##    E    0    0    0   14 2724</code></pre>
 <p>We calculate the accuracy of the GBM on this holdout set:</p>
-<pre class="r"><code>  (t[1,1] + t[2,2] + t[3,3] + t[4,4] + t[5,5])/nrow(holdout)</code></pre>
+<pre class="r"><code>  sum(diag(t))/nrow(holdout)</code></pre>
 <pre><code>## [1] 0.9950759</code></pre>
-<p>This performance is even slightly better than the resampling error.</p>
-</div>
+<p>This performance is even slightly better than the out-of-sample error.</p>
 </div>
 <div id="predictions" class="section level2">
 <h2>Predictions</h2>
-<pre class="r"><code>  pred2 &lt;- predict(gbm5000, testing)
-  data.frame(Prediction = pred2)</code></pre>
-<pre><code>##    Prediction
-## 1           B
-## 2           A
-## 3           B
-## 4           A
-## 5           A
-## 6           E
-## 7           D
-## 8           B
-## 9           A
-## 10          A
-## 11          B
-## 12          C
-## 13          B
-## 14          A
-## 15          E
-## 16          E
-## 17          A
-## 18          B
-## 19          B
-## 20          B</code></pre>
+<pre class="r"><code>  predA &lt;- predict(rf5000, testing)
+  predB &lt;- predict(gbm5000, testing)
+  data.frame(RF = predA, GBM = predB)</code></pre>
+<pre><code>##    RF GBM
+## 1   B   B
+## 2   A   A
+## 3   B   B
+## 4   A   A
+## 5   A   A
+## 6   E   E
+## 7   D   D
+## 8   B   B
+## 9   A   A
+## 10  A   A
+## 11  B   B
+## 12  C   C
+## 13  B   B
+## 14  A   A
+## 15  E   E
+## 16  E   E
+## 17  A   A
+## 18  B   B
+## 19  B   B
+## 20  B   B</code></pre>
+<p>Model predictions agree with another.</p>
 </div>
 
 

@@ -5,10 +5,11 @@ date: "December 16, 2014"
 ---
 
 ******************************
-## Title
+## Predicting Exercise Patterns
   
-The goal of this project is to predict the manner in which they did the exercise. 
-"dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects." 
+The goal of this project is to predict the manner in which people do exercise. The data set comprises of measurements taken won four healthy subjects doing different activities. The response variable is made up of 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours.
+
+Data is taken from [here](http://groupware.les.inf.puc-rio.br/har).
 
 
 ### Data Processing
@@ -22,7 +23,8 @@ I begin the analysis by loading libraries and setting a few global parameters:
   setwd("~/Documents/Courses/datasciencecoursera/MachLearnProj/")
 ```
 
-I then check that the data files exist, download it (if needed), and unzip it:
+If the data file does not exist, it is downloaded. The file is then read into R:
+
 
 ```{r chuckDownload, echo = FALSE}
   # Download file if it does not exist
@@ -34,8 +36,6 @@ I then check that the data files exist, download it (if needed), and unzip it:
     fileURL <- "http://bit.ly/1znCGyy"
     download.file(fileURL, destfile = "pml-testing.csv", method="curl")}
 ```
-
-A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set:
 
 ```{r chunkLoadData, cache = TRUE}
   # Read data
@@ -53,15 +53,18 @@ A review of the testing dataset reveals that there are only 58 predictor variabl
   testing   = testing[,!drop]
 ```
 
+A review of the testing dataset reveals that there are only 58 predictor variables. This number is far lower than the training set, which has 58 extraneous variables. To train the model, we select the feature space that exists both in the training and testing set (see above).
 
-With 159 predictor variables available, a model selection method such as best subset selection is unfeasible. 
+I then subset the data to a smaller, more workable size (5000 observations only):
 
 ```{r chunkSub, cache = TRUE, autodep=TRUE}
   # smaller subset subset to improve speed
   set.seed(3322); s5000 = training[sample(nrow(training), 5000),]
 ```
 
-Now we train different models:
+## Model Training
+
+Now we train different models. I have chosen two statistical learning methods that generally are quite competitive: random forersts and gradient boosting. We train on both these models using 5000 randomly selected observations from the data. The seed is set identically in each case so that model diagnostics may fairly be compared.
 
 ```{r chunkRF5000, cache = TRUE, autodep=TRUE}
   # Random forest model with 5000 observations
@@ -76,6 +79,7 @@ Now we train different models:
 ```
 
 
+We let the caret package run cross-validation and splits and automatically select the best tuning parameters. 
 
 
 ```{r chunkResults, cache = TRUE, autodep=TRUE}
@@ -83,23 +87,11 @@ Now we train different models:
   gbm5000
 ```
 
-
-```{r chunkST1, cache = TRUE, autodep=TRUE, eval=FALSE, echo=FALSE}
-  # compare performancce
-  perf = rbind(system.time(train(classe~., data = s100, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s200, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s300, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s500, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s1000, method = "rf", prox = TRUE)),
-        system.time(train(classe~., data = s2000, method = "rf", prox = TRUE)))
-
-  perf = cbind(n = c(100,200,300,500,1000,2000), perf)
-  perf
-```
+The model print-outs estimate an out-of sample error rate. The out-of-bag error rate for the random forest model is 0.46%, calculated through cross-validation. This is slighlty higher than the best error estimation rate for boosting (0.26%).
 
 We make a confusion matrix for the holdout set of data that was not used in training the data:
 
-```{r chunkCM, cache = TRUE}
+```{r chunkCM, cache = TRUE, autodep=TRUE}
   holdout = training[-c(as.numeric(row.names(s5000))),]
   pred <- predict(gbm5000, holdout)
   holdout$predRight <- pred == holdout$classe
@@ -108,14 +100,28 @@ We make a confusion matrix for the holdout set of data that was not used in trai
 
 We calculate the accuracy of the GBM on this holdout set: 
 
-```{r chunkAccuracy, cache = TRUE}
-  (t[1,1] + t[2,2] + t[3,3] + t[4,4] + t[5,5])/nrow(holdout)
+```{r chunkAccuracy, cache = TRUE, autodep=TRUE}
+  sum(diag(t))/nrow(holdout)
 ```
 
-This performance is even slightly better than the resampling error.
+This performance is even slightly better than the out-of-sample error.
 
 ## Predictions
-```{r chunkPred, cache = TRUE}
-  pred2 <- predict(gbm5000, testing)
-  data.frame(Prediction = pred2)
+```{r chunkPred, cache = TRUE, autodep=TRUE}
+  predA <- predict(rf5000, testing)
+  predB <- predict(gbm5000, testing)
+  data.frame(RF = predA, GBM = predB)
+```
+
+Model predictions agree with another.
+
+```{r chunkExport, cache = TRUE, autodep=TRUE, echo=FALSE}
+  pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+      filename = paste0("problem_id_",i,".txt")
+      write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+      }
+  }
+  pml_write_files(predB)
 ```
